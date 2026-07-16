@@ -3,7 +3,7 @@ import type { UnknownRecord } from "type-fest";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { keyIn } from "ts-extras";
+import { arrayJoin, keyIn } from "ts-extras";
 
 /** Shape shared by the package-owned ATTW profile files. */
 export interface AttwConfig {
@@ -19,11 +19,11 @@ export type AttwProfile =
     | "strict";
 
 /** All public ATTW variants. */
-export const attwProfiles: readonly AttwProfile[] = [
+export const attwProfiles: readonly AttwProfile[] = Object.freeze([
     "esm-only",
     "node16",
     "strict",
-];
+]);
 
 /** Absolute path to the backwards-compatible default `.attw.json`. */
 export const attwConfigPath: string = fileURLToPath(
@@ -51,12 +51,29 @@ const isAttwProfile = (value: unknown): value is AttwProfile => {
     }
 };
 
+const assertAttwProfile: (value: unknown) => asserts value is AttwProfile = (
+    value
+) => {
+    if (!isAttwProfile(value)) {
+        throw new RangeError(
+            `Unknown ATTW profile: ${String(value)}. Expected one of: ${arrayJoin(attwProfiles, ", ")}.`
+        );
+    }
+};
+
 const isRecord = (value: unknown): value is UnknownRecord =>
     typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Return the absolute path to one bundled ATTW profile. */
+/**
+ * Return the absolute path to one bundled ATTW profile.
+ *
+ * @throws When `profile` is not an official ATTW profile name.
+ */
 export function getAttwConfigPath(profile: AttwProfile): string {
-    return profilePaths[profile];
+    const candidate: unknown = profile;
+    assertAttwProfile(candidate);
+
+    return profilePaths[candidate];
 }
 
 /** Load one bundled ATTW profile. */
